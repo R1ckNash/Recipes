@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -21,6 +22,12 @@ public class RecipeDao {
 
   @Column(name = "name")
   private String name;
+
+  @Column(name = "category")
+  private String category;
+
+  @Column(name = "date")
+  private LocalDateTime date;
 
   @Column(name = "description")
   private String description;

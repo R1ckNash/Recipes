@@ -1,14 +1,11 @@
 package recipes.controllers;
 
 import lombok.AllArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import recipes.dto.RecipeDto;
 import recipes.services.RecipeService;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 @AllArgsConstructor
@@ -26,21 +23,19 @@ public class RecipeController {
   @PostMapping("/new")
   public ResponseEntity<RecipeService.Id> setRecipe(@RequestBody RecipeDto recipeDto) {
     Optional<RecipeService.Id> optionalId = recipeService.putRecipe(recipeDto);
-    return Optional.ofNullable(optionalId)
-        .map(ResponseEntity::of)
-        .orElse(ResponseEntity.badRequest().build());
+    return optionalId.isPresent()
+        ? ResponseEntity.of(optionalId)
+        : ResponseEntity.badRequest().build();
   }
 
-  @ExceptionHandler({IllegalArgumentException.class})
-  public ResponseEntity<Map<String, String>> handler(RuntimeException exception) {
-    Map<String, String> exceptionMap = new HashMap<>();
-    exceptionMap.put("error", exception.getMessage());
-    ResponseEntity.BodyBuilder bodyBuilder;
-    if (exception instanceof IllegalArgumentException) {
-      bodyBuilder = ResponseEntity.status(HttpStatus.NOT_FOUND);
-    } else {
-      bodyBuilder = ResponseEntity.status(HttpStatus.BAD_REQUEST);
-    }
-    return bodyBuilder.body(exceptionMap);
+  @DeleteMapping(value = "/{id}")
+  public ResponseEntity<?> deleteRecipe(@PathVariable Long id) {
+    boolean existed = recipeService.deleteRecipeById(id);
+    return existed ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+  }
+
+  @PutMapping("/{id}")
+  public ResponseEntity<?> updateRecipe(@RequestBody RecipeDto recipeDto, @PathVariable Long id) {
+    return recipeService.updateRecipeById(id, recipeDto);
   }
 }

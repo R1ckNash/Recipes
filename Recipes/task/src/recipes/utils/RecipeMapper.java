@@ -8,6 +8,7 @@ import recipes.dao.IngredientDao;
 import recipes.dao.RecipeDao;
 import recipes.dto.RecipeDto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -47,8 +48,9 @@ public interface RecipeMapper {
 
   @AfterMapping
   default void mapDaoToIngredientsAndDirections(
-          RecipeDto recipeDto, @MappingTarget RecipeDao recipeDao) {
+      RecipeDto recipeDto, @MappingTarget RecipeDao recipeDao) {
     recipeDao.getIngredients().stream().forEach(i -> i.setRecipeDao(recipeDao));
     recipeDao.getDirections().stream().forEach(d -> d.setRecipeDao(recipeDao));
+    recipeDao.setDate(LocalDateTime.now());
   }
 }

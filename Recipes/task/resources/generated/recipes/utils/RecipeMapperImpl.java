@@ -6,7 +6,7 @@ import recipes.dto.RecipeDto;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2021-11-22T22:30:54+0300",
+    date = "2021-11-23T19:14:52+0300",
     comments = "version: 1.4.2.Final, compiler: javac, environment: Java 11.0.12 (JetBrains s.r.o.)"
 )
 public class RecipeMapperImpl implements RecipeMapper {
@@ -20,6 +20,8 @@ public class RecipeMapperImpl implements RecipeMapper {
         RecipeDao recipeDao = new RecipeDao();
 
         recipeDao.setName( recipeDto.getName() );
+        recipeDao.setCategory( recipeDto.getCategory() );
+        recipeDao.setDate( recipeDto.getDate() );
         recipeDao.setDescription( recipeDto.getDescription() );
         recipeDao.setIngredients( mapToIngredients( recipeDto.getIngredients() ) );
         recipeDao.setDirections( mapToDirection( recipeDto.getDirections() ) );
@@ -38,6 +40,8 @@ public class RecipeMapperImpl implements RecipeMapper {
         RecipeDto recipeDto = new RecipeDto();
 
         recipeDto.setName( recipeDao.getName() );
+        recipeDto.setCategory( recipeDao.getCategory() );
+        recipeDto.setDate( recipeDao.getDate() );
         recipeDto.setDescription( recipeDao.getDescription() );
         recipeDto.setIngredients( mapIngredients( recipeDao.getIngredients() ) );
         recipeDto.setDirections( mapDirections( recipeDao.getDirections() ) );
