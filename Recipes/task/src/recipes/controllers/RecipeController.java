@@ -1,11 +1,14 @@
 package recipes.controllers;
 
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import recipes.dto.RecipeDto;
 import recipes.services.RecipeService;
 
+import java.util.List;
 import java.util.Optional;
 
 @AllArgsConstructor
@@ -18,6 +21,18 @@ public class RecipeController {
   @GetMapping("/{id}")
   public ResponseEntity<RecipeDto> getRecipe(@PathVariable Long id) {
     return ResponseEntity.of(recipeService.findRecipeById(id));
+  }
+
+  @GetMapping("/search")
+  public List<RecipeDto> searchRecipe(
+      @RequestParam(defaultValue = "") String category,
+      @RequestParam(defaultValue = "") String name) {
+
+    if ((name.equals("")) == (category.equals("")))
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+
+    if (!name.equals("")) return recipeService.searchByName(name);
+    return recipeService.searchByCategory(category);
   }
 
   @PostMapping("/new")

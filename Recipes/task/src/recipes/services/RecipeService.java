@@ -7,8 +7,11 @@ import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import recipes.dao.RecipeDao;
 import recipes.dto.RecipeDto;
+import recipes.repository.DirectionRepository;
+import recipes.repository.IngredientRepository;
 import recipes.repository.RecipeRepository;
 import recipes.utils.RecipeMapper;
 
@@ -16,6 +19,7 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 @Service
 @Data
@@ -24,10 +28,17 @@ public class RecipeService {
 
   private final RecipeMapper mapper = Mappers.getMapper(RecipeMapper.class);
   private RecipeRepository recipeRepository;
+  private IngredientRepository ingredientRepository;
+  private DirectionRepository directionRepository;
 
   @Autowired
-  public RecipeService(RecipeRepository recipeRepository) {
+  public RecipeService(
+      RecipeRepository recipeRepository,
+      IngredientRepository ingredientRepository,
+      DirectionRepository directionRepository) {
     this.recipeRepository = recipeRepository;
+    this.ingredientRepository = ingredientRepository;
+    this.directionRepository = directionRepository;
   }
 
   public Optional<RecipeDto> findRecipeById(Long id) {
@@ -53,14 +64,23 @@ public class RecipeService {
     return exists;
   }
 
+  @Transactional
   public ResponseEntity<?> updateRecipeById(Long id, RecipeDto recipe) {
     try {
       validateRecipe(recipe);
       boolean exists = recipeRepository.existsById(id);
       if (exists) {
-        RecipeDao recipeDao = mapper.mapDtoToDao(recipe);
-        recipeDao.setId(id);
-        recipeRepository.save(recipeDao);
+        RecipeDao updatedDao = mapper.mapDtoToDao(recipe);
+        updatedDao.setId(id);
+
+        ingredientRepository.deleteAllByRecipeDaoId(id);
+        ingredientRepository.saveAll(updatedDao.getIngredients());
+
+        directionRepository.deleteAllByRecipeDaoId(id);
+        directionRepository.saveAll(updatedDao.getDirections());
+
+        recipeRepository.save(updatedDao);
+
         return ResponseEntity.noContent().build();
       } else {
         return ResponseEntity.notFound().build();
@@ -69,6 +89,18 @@ public class RecipeService {
       e.printStackTrace();
       return ResponseEntity.badRequest().build();
     }
+  }
+
+  public List<RecipeDto> searchByName(String name) {
+    return recipeRepository.findDistinctByNameContainingIgnoreCaseOrderByDateDesc(name).stream()
+        .map(mapper::mapDaoToDto)
+        .collect(Collectors.toList());
+  }
+
+  public List<RecipeDto> searchByCategory(String category) {
+    return recipeRepository.findDistinctByCategoryIgnoreCaseOrderByDateDesc(category).stream()
+        .map(mapper::mapDaoToDto)
+        .collect(Collectors.toList());
   }
 
   private void validateRecipe(RecipeDto recipeDto) {

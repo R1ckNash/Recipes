@@ -13,7 +13,7 @@ public interface RecipeRepository extends CrudRepository<RecipeDao, Long> {
 
     void deleteById(Long id);
 
-    List<RecipeDao> findAllByCategoryIgnoreCaseOrderByDateDesc(String category);
+    List<RecipeDao> findDistinctByCategoryIgnoreCaseOrderByDateDesc(String category);
 
-    List<RecipeDao> findAllByNameContainsIgnoreCaseOrderByDateDesc(String name);
+    List<RecipeDao> findDistinctByNameContainingIgnoreCaseOrderByDateDesc(String name);
 }
