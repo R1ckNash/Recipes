@@ -45,4 +45,8 @@ public class RecipeDao {
       mappedBy = "recipeDao",
       cascade = {CascadeType.REMOVE, CascadeType.PERSIST})
   private List<DirectionDao> directions;
+
+  @ManyToOne
+  @JoinColumn(name = "author_id")
+  private UserDao author;
 }

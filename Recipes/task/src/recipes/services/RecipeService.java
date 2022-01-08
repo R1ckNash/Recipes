@@ -5,14 +5,19 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import recipes.dao.RecipeDao;
+import recipes.dao.UserDao;
 import recipes.dto.RecipeDto;
 import recipes.repository.DirectionRepository;
 import recipes.repository.IngredientRepository;
 import recipes.repository.RecipeRepository;
+import recipes.repository.UserRepository;
+import recipes.services.userDetails.UserDetailsImpl;
 import recipes.utils.RecipeMapper;
 
 import java.io.Serializable;
@@ -30,25 +35,35 @@ public class RecipeService {
   private RecipeRepository recipeRepository;
   private IngredientRepository ingredientRepository;
   private DirectionRepository directionRepository;
+  private UserRepository userRepository;
 
   @Autowired
   public RecipeService(
       RecipeRepository recipeRepository,
       IngredientRepository ingredientRepository,
-      DirectionRepository directionRepository) {
+      DirectionRepository directionRepository,
+      UserRepository userRepository) {
     this.recipeRepository = recipeRepository;
     this.ingredientRepository = ingredientRepository;
     this.directionRepository = directionRepository;
+    this.userRepository = userRepository;
   }
 
   public Optional<RecipeDto> findRecipeById(Long id) {
     return recipeRepository.findById(id).map(mapper::mapDaoToDto);
   }
 
-  public Optional<Id> putRecipe(RecipeDto recipe) {
+  public Optional<Id> putRecipe(RecipeDto recipe, Authentication authentication) {
     try {
       validateRecipe(recipe);
-      RecipeDao recipeDao = recipeRepository.save(mapper.mapDtoToDao(recipe));
+      RecipeDao recipeDao = mapper.mapDtoToDao(recipe);
+      authentication.getPrincipal();
+      UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+      recipeDao.setAuthor(
+          userRepository
+              .findUserByUsername(userDetails.getUsername())
+              .orElseThrow(() -> new UsernameNotFoundException("Could not find user")));
+      recipeDao = recipeRepository.save(recipeDao);
       return Optional.of(new Id(recipeDao.getId()));
     } catch (IllegalArgumentException e) {
       e.printStackTrace();
@@ -56,38 +71,50 @@ public class RecipeService {
     }
   }
 
-  public boolean deleteRecipeById(Long id) {
+  public HttpStatus deleteRecipeById(Long id, UserDetailsImpl userDetails) {
     boolean exists = recipeRepository.existsById(id);
     if (exists) {
-      recipeRepository.deleteById(id);
+      UserDao userDao = recipeRepository.findById(id).get().getAuthor();
+      if (userDao.getUsername().equals(userDetails.getUsername())) {
+        recipeRepository.deleteById(id);
+        return HttpStatus.NO_CONTENT;
+      } else {
+        return HttpStatus.FORBIDDEN;
+      }
     }
-    return exists;
+    return HttpStatus.NOT_FOUND;
   }
 
   @Transactional
-  public ResponseEntity<?> updateRecipeById(Long id, RecipeDto recipe) {
+  public HttpStatus updateRecipeById(Long id, RecipeDto recipe, UserDetailsImpl userDetails) {
     try {
       validateRecipe(recipe);
       boolean exists = recipeRepository.existsById(id);
       if (exists) {
-        RecipeDao updatedDao = mapper.mapDtoToDao(recipe);
-        updatedDao.setId(id);
+        UserDao userDao = recipeRepository.findById(id).get().getAuthor();
+        if (userDao.getUsername().equals(userDetails.getUsername())) {
+          RecipeDao updatedDao = mapper.mapDtoToDao(recipe);
+          updatedDao.setId(id);
+          updatedDao.setAuthor(userDao);
 
-        ingredientRepository.deleteAllByRecipeDaoId(id);
-        ingredientRepository.saveAll(updatedDao.getIngredients());
+          ingredientRepository.deleteAllByRecipeDaoId(id);
+          ingredientRepository.saveAll(updatedDao.getIngredients());
 
-        directionRepository.deleteAllByRecipeDaoId(id);
-        directionRepository.saveAll(updatedDao.getDirections());
+          directionRepository.deleteAllByRecipeDaoId(id);
+          directionRepository.saveAll(updatedDao.getDirections());
 
-        recipeRepository.save(updatedDao);
+          recipeRepository.save(updatedDao);
 
-        return ResponseEntity.noContent().build();
+          return HttpStatus.NO_CONTENT;
+        } else {
+          return HttpStatus.FORBIDDEN;
+        }
       } else {
-        return ResponseEntity.notFound().build();
+        return HttpStatus.NOT_FOUND;
       }
     } catch (IllegalArgumentException e) {
       e.printStackTrace();
-      return ResponseEntity.badRequest().build();
+      return HttpStatus.BAD_REQUEST;
     }
   }
 

@@ -6,7 +6,7 @@ import recipes.dto.RecipeDto;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2021-11-23T23:23:58+0300",
+    date = "2022-01-07T22:45:38+0300",
     comments = "version: 1.4.2.Final, compiler: javac, environment: Java 11.0.12 (JetBrains s.r.o.)"
 )
 public class RecipeMapperImpl implements RecipeMapper {
